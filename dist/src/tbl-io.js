@@ -1,57 +1,39 @@
-"use strict";
 /* (C) Stefan John / Stenway / SimpleML.com / 2023 */
-var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, generator) {
-    function adopt(value) { return value instanceof P ? value : new P(function (resolve) { resolve(value); }); }
-    return new (P || (P = Promise))(function (resolve, reject) {
-        function fulfilled(value) { try { step(generator.next(value)); } catch (e) { reject(e); } }
-        function rejected(value) { try { step(generator["throw"](value)); } catch (e) { reject(e); } }
-        function step(result) { result.done ? resolve(result.value) : adopt(result.value).then(fulfilled, rejected); }
-        step((generator = generator.apply(thisArg, _arguments || [])).next());
-    });
-};
-Object.defineProperty(exports, "__esModule", { value: true });
-exports.TblStreamWriter = exports.SyncTblStreamWriter = exports.TblStreamReader = exports.SyncTblStreamReader = exports.TblFile = void 0;
-const reliabletxt_io_1 = require("@stenway/reliabletxt-io");
-const sml_1 = require("@stenway/sml");
-const sml_io_1 = require("@stenway/sml-io");
-const tbl_1 = require("@stenway/tbl");
+import { ReliableTxtFile, WriterMode } from "@stenway/reliabletxt-io";
+import { SmlAttribute, SmlDocument } from "@stenway/sml";
+import { SmlStreamReader, SmlStreamWriter, SyncSmlStreamReader, SyncSmlStreamWriter } from "@stenway/sml-io";
+import { TblDocument } from "@stenway/tbl";
 // ----------------------------------------------------------------------
-class TblFile {
+export class TblFile {
     static saveSync(document, filePath, aligned = false, whitespaceBetween = null, rightAligned = null) {
         const content = document.toString(aligned, whitespaceBetween, rightAligned);
-        reliabletxt_io_1.ReliableTxtFile.writeAllTextSync(content, filePath, document.encoding);
+        ReliableTxtFile.writeAllTextSync(content, filePath, document.encoding);
     }
-    static save(document, filePath, aligned = false, whitespaceBetween = null, rightAligned = null) {
-        return __awaiter(this, void 0, void 0, function* () {
-            const content = document.toString(aligned, whitespaceBetween, rightAligned);
-            yield reliabletxt_io_1.ReliableTxtFile.writeAllText(content, filePath, document.encoding);
-        });
+    static async save(document, filePath, aligned = false, whitespaceBetween = null, rightAligned = null) {
+        const content = document.toString(aligned, whitespaceBetween, rightAligned);
+        await ReliableTxtFile.writeAllText(content, filePath, document.encoding);
     }
     static saveMinifiedSync(document, filePath) {
         const content = document.toMinifiedString();
-        reliabletxt_io_1.ReliableTxtFile.writeAllTextSync(content, filePath, document.encoding);
+        ReliableTxtFile.writeAllTextSync(content, filePath, document.encoding);
     }
-    static saveMinified(document, filePath) {
-        return __awaiter(this, void 0, void 0, function* () {
-            const content = document.toMinifiedString();
-            yield reliabletxt_io_1.ReliableTxtFile.writeAllText(content, filePath, document.encoding);
-        });
+    static async saveMinified(document, filePath) {
+        const content = document.toMinifiedString();
+        await ReliableTxtFile.writeAllText(content, filePath, document.encoding);
     }
     static loadSync(filePath) {
-        const reliableTxtDocument = reliabletxt_io_1.ReliableTxtFile.loadSync(filePath);
-        return tbl_1.TblDocument.parse(reliableTxtDocument.text, reliableTxtDocument.encoding);
+        const reliableTxtDocument = ReliableTxtFile.loadSync(filePath);
+        return TblDocument.parse(reliableTxtDocument.text, reliableTxtDocument.encoding);
     }
-    static load(filePath) {
-        return __awaiter(this, void 0, void 0, function* () {
-            const reliableTxtDocument = yield reliabletxt_io_1.ReliableTxtFile.load(filePath);
-            return tbl_1.TblDocument.parse(reliableTxtDocument.text, reliableTxtDocument.encoding);
-        });
+    static async load(filePath) {
+        const reliableTxtDocument = await ReliableTxtFile.load(filePath);
+        return TblDocument.parse(reliableTxtDocument.text, reliableTxtDocument.encoding);
     }
     static appendRowsSync(rows, templateDocument, filePath) {
         if (rows.length === 0) {
             return;
         }
-        const writer = SyncTblStreamWriter.create(templateDocument, filePath, reliabletxt_io_1.WriterMode.CreateOrAppend);
+        const writer = SyncTblStreamWriter.create(templateDocument, filePath, WriterMode.CreateOrAppend);
         try {
             writer.writeRows(rows);
         }
@@ -59,28 +41,21 @@ class TblFile {
             writer.close();
         }
     }
-    static appendRows(rows, templateDocument, filePath) {
-        return __awaiter(this, void 0, void 0, function* () {
-            if (rows.length === 0) {
-                return;
-            }
-            const writer = yield TblStreamWriter.create(templateDocument, filePath, reliabletxt_io_1.WriterMode.CreateOrAppend);
-            try {
-                yield writer.writeRows(rows);
-            }
-            finally {
-                yield writer.close();
-            }
-        });
+    static async appendRows(rows, templateDocument, filePath) {
+        if (rows.length === 0) {
+            return;
+        }
+        const writer = await TblStreamWriter.create(templateDocument, filePath, WriterMode.CreateOrAppend);
+        try {
+            await writer.writeRows(rows);
+        }
+        finally {
+            await writer.close();
+        }
     }
 }
-exports.TblFile = TblFile;
 // ----------------------------------------------------------------------
-class SyncTblStreamReader {
-    constructor(reader, header) {
-        this.reader = reader;
-        this.header = header;
-    }
+export class SyncTblStreamReader {
     get encoding() {
         return this.reader.encoding;
     }
@@ -90,8 +65,12 @@ class SyncTblStreamReader {
     get handle() {
         return this.reader.handle;
     }
+    constructor(reader, header) {
+        this.reader = reader;
+        this.header = header;
+    }
     static create(filePath, chunkSize = 4096) {
-        const reader = sml_io_1.SyncSmlStreamReader.create(filePath, false, chunkSize);
+        const reader = SyncSmlStreamReader.create(filePath, false, chunkSize);
         try {
             return this.internalCreate(reader);
         }
@@ -104,7 +83,7 @@ class SyncTblStreamReader {
         if (!writer.existing) {
             throw new Error(`Writer is not in append mode`);
         }
-        const reader = sml_io_1.SyncSmlStreamReader.getAppendReader(writer);
+        const reader = SyncSmlStreamReader.getAppendReader(writer);
         return this.internalCreate(reader);
     }
     static internalCreate(reader) {
@@ -139,7 +118,7 @@ class SyncTblStreamReader {
             }
         }
         const columnNames = [columnNamesAttribute.name, ...columnNamesAttribute.values];
-        const header = new tbl_1.TblDocument(columnNames, reader.encoding);
+        const header = new TblDocument(columnNames, reader.encoding);
         if (metaElement !== null) {
             header.meta.parse(metaElement);
         }
@@ -164,13 +143,8 @@ class SyncTblStreamReader {
         this.reader.close();
     }
 }
-exports.SyncTblStreamReader = SyncTblStreamReader;
 // ----------------------------------------------------------------------
-class TblStreamReader {
-    constructor(reader, header) {
-        this.reader = reader;
-        this.header = header;
-    }
+export class TblStreamReader {
     get encoding() {
         return this.reader.encoding;
     }
@@ -180,97 +154,86 @@ class TblStreamReader {
     get handle() {
         return this.reader.handle;
     }
-    static create(filePath, chunkSize = 4096) {
-        return __awaiter(this, void 0, void 0, function* () {
-            const reader = yield sml_io_1.SmlStreamReader.create(filePath, false, chunkSize);
-            try {
-                return yield this.internalCreate(reader);
-            }
-            catch (error) {
-                yield reader.close();
-                throw error;
-            }
-        });
-    }
-    static getAppendReader(writer) {
-        return __awaiter(this, void 0, void 0, function* () {
-            if (!writer.existing) {
-                throw new Error(`Writer is not in append mode`);
-            }
-            const reader = yield sml_io_1.SmlStreamReader.getAppendReader(writer);
-            return yield this.internalCreate(reader);
-        });
-    }
-    static internalCreate(reader) {
-        return __awaiter(this, void 0, void 0, function* () {
-            if (!reader.root.hasName("Table")) {
-                throw new Error("Not a valid table document");
-            }
-            let columnNamesAttribute;
-            let metaElement = null;
-            const node = yield reader.readNode();
-            if (node === null) {
-                throw new Error(`Column names attribute expected`);
-            }
-            if (node.isElement()) {
-                const element = node;
-                element.assureName("Meta");
-                metaElement = element;
-                const nextNode = yield reader.readNode();
-                if (nextNode === null || !nextNode.isAttribute()) {
-                    throw new Error(`Column names attribute expected`);
-                }
-                columnNamesAttribute = nextNode;
-            }
-            else if (node.isAttribute()) {
-                columnNamesAttribute = node;
-            }
-            else {
-                throw new Error(`Column names attribute expected`);
-            }
-            for (const value of columnNamesAttribute.values) {
-                if (value === null) {
-                    throw new Error("Column name cannot be null");
-                }
-            }
-            const columnNames = [columnNamesAttribute.name, ...columnNamesAttribute.values];
-            const header = new tbl_1.TblDocument(columnNames, reader.encoding);
-            if (metaElement !== null) {
-                header.meta.parse(metaElement);
-            }
-            return new TblStreamReader(reader, header);
-        });
-    }
-    readRow() {
-        return __awaiter(this, void 0, void 0, function* () {
-            const node = yield this.reader.readNode();
-            if (node === null) {
-                return null;
-            }
-            if (!node.isAttribute()) {
-                throw new Error(`Attribute expected`);
-            }
-            const attribute = node;
-            const rowValues = [attribute.name, ...attribute.values];
-            if (rowValues.length > this.header.columnCount) {
-                throw new Error("Row has more values than there are columns");
-            }
-            return rowValues;
-        });
-    }
-    close() {
-        return __awaiter(this, void 0, void 0, function* () {
-            yield this.reader.close();
-        });
-    }
-}
-exports.TblStreamReader = TblStreamReader;
-// ----------------------------------------------------------------------
-class SyncTblStreamWriter {
-    constructor(writer, header) {
-        this.writer = writer;
+    constructor(reader, header) {
+        this.reader = reader;
         this.header = header;
     }
+    static async create(filePath, chunkSize = 4096) {
+        const reader = await SmlStreamReader.create(filePath, false, chunkSize);
+        try {
+            return await this.internalCreate(reader);
+        }
+        catch (error) {
+            await reader.close();
+            throw error;
+        }
+    }
+    static async getAppendReader(writer) {
+        if (!writer.existing) {
+            throw new Error(`Writer is not in append mode`);
+        }
+        const reader = await SmlStreamReader.getAppendReader(writer);
+        return await this.internalCreate(reader);
+    }
+    static async internalCreate(reader) {
+        if (!reader.root.hasName("Table")) {
+            throw new Error("Not a valid table document");
+        }
+        let columnNamesAttribute;
+        let metaElement = null;
+        const node = await reader.readNode();
+        if (node === null) {
+            throw new Error(`Column names attribute expected`);
+        }
+        if (node.isElement()) {
+            const element = node;
+            element.assureName("Meta");
+            metaElement = element;
+            const nextNode = await reader.readNode();
+            if (nextNode === null || !nextNode.isAttribute()) {
+                throw new Error(`Column names attribute expected`);
+            }
+            columnNamesAttribute = nextNode;
+        }
+        else if (node.isAttribute()) {
+            columnNamesAttribute = node;
+        }
+        else {
+            throw new Error(`Column names attribute expected`);
+        }
+        for (const value of columnNamesAttribute.values) {
+            if (value === null) {
+                throw new Error("Column name cannot be null");
+            }
+        }
+        const columnNames = [columnNamesAttribute.name, ...columnNamesAttribute.values];
+        const header = new TblDocument(columnNames, reader.encoding);
+        if (metaElement !== null) {
+            header.meta.parse(metaElement);
+        }
+        return new TblStreamReader(reader, header);
+    }
+    async readRow() {
+        const node = await this.reader.readNode();
+        if (node === null) {
+            return null;
+        }
+        if (!node.isAttribute()) {
+            throw new Error(`Attribute expected`);
+        }
+        const attribute = node;
+        const rowValues = [attribute.name, ...attribute.values];
+        if (rowValues.length > this.header.columnCount) {
+            throw new Error("Row has more values than there are columns");
+        }
+        return rowValues;
+    }
+    async close() {
+        await this.reader.close();
+    }
+}
+// ----------------------------------------------------------------------
+export class SyncTblStreamWriter {
     get encoding() {
         return this.writer.encoding;
     }
@@ -283,9 +246,13 @@ class SyncTblStreamWriter {
     get existing() {
         return this.writer.existing;
     }
-    static create(templateDocument, filePath, mode = reliabletxt_io_1.WriterMode.CreateOrOverwrite) {
-        const smlDocument = new sml_1.SmlDocument(templateDocument.toElement());
-        const writer = sml_io_1.SyncSmlStreamWriter.create(smlDocument, filePath, mode, false);
+    constructor(writer, header) {
+        this.writer = writer;
+        this.header = header;
+    }
+    static create(templateDocument, filePath, mode = WriterMode.CreateOrOverwrite) {
+        const smlDocument = new SmlDocument(templateDocument.toElement());
+        const writer = SyncSmlStreamWriter.create(smlDocument, filePath, mode, false);
         try {
             let header;
             if (writer.existing) {
@@ -300,7 +267,7 @@ class SyncTblStreamWriter {
                     writer.writeNode(templateDocument.meta.toElement());
                 }
                 const columnNames = templateDocument.columnNames;
-                writer.writeNode(new sml_1.SmlAttribute(columnNames[0], columnNames.slice(1)));
+                writer.writeNode(new SmlAttribute(columnNames[0], columnNames.slice(1)));
                 header = templateDocument;
             }
             return new SyncTblStreamWriter(writer, header);
@@ -320,7 +287,7 @@ class SyncTblStreamWriter {
         if (values.length > this.header.columnNames.length) {
             throw new Error("Row has more values than there are columns");
         }
-        this.writer.writeNode(new sml_1.SmlAttribute(values[0], values.slice(1)));
+        this.writer.writeNode(new SmlAttribute(values[0], values.slice(1)));
     }
     writeRows(rows) {
         for (const row of rows) {
@@ -331,13 +298,8 @@ class SyncTblStreamWriter {
         this.writer.close();
     }
 }
-exports.SyncTblStreamWriter = SyncTblStreamWriter;
 // ----------------------------------------------------------------------
-class TblStreamWriter {
-    constructor(writer, header) {
-        this.writer = writer;
-        this.header = header;
-    }
+export class TblStreamWriter {
     get encoding() {
         return this.writer.encoding;
     }
@@ -350,61 +312,56 @@ class TblStreamWriter {
     get existing() {
         return this.writer.existing;
     }
-    static create(templateDocument, filePath, mode = reliabletxt_io_1.WriterMode.CreateOrOverwrite) {
-        return __awaiter(this, void 0, void 0, function* () {
-            const smlDocument = new sml_1.SmlDocument(templateDocument.toElement());
-            const writer = yield sml_io_1.SmlStreamWriter.create(smlDocument, filePath, mode, false);
-            try {
-                let header;
-                if (writer.existing) {
-                    const reader = yield TblStreamReader.getAppendReader(writer);
-                    if (reader.header.columnCount !== templateDocument.columnCount) {
-                        throw new Error(`Column count mismatch`);
-                    }
-                    header = reader.header;
+    constructor(writer, header) {
+        this.writer = writer;
+        this.header = header;
+    }
+    static async create(templateDocument, filePath, mode = WriterMode.CreateOrOverwrite) {
+        const smlDocument = new SmlDocument(templateDocument.toElement());
+        const writer = await SmlStreamWriter.create(smlDocument, filePath, mode, false);
+        try {
+            let header;
+            if (writer.existing) {
+                const reader = await TblStreamReader.getAppendReader(writer);
+                if (reader.header.columnCount !== templateDocument.columnCount) {
+                    throw new Error(`Column count mismatch`);
                 }
-                else {
-                    if (templateDocument.meta.hasAny) {
-                        yield writer.writeNode(templateDocument.meta.toElement());
-                    }
-                    const columnNames = templateDocument.columnNames;
-                    yield writer.writeNode(new sml_1.SmlAttribute(columnNames[0], columnNames.slice(1)));
-                    header = templateDocument;
+                header = reader.header;
+            }
+            else {
+                if (templateDocument.meta.hasAny) {
+                    await writer.writeNode(templateDocument.meta.toElement());
                 }
-                return new TblStreamWriter(writer, header);
+                const columnNames = templateDocument.columnNames;
+                await writer.writeNode(new SmlAttribute(columnNames[0], columnNames.slice(1)));
+                header = templateDocument;
             }
-            catch (error) {
-                yield writer.close();
-                throw error;
-            }
-        });
+            return new TblStreamWriter(writer, header);
+        }
+        catch (error) {
+            await writer.close();
+            throw error;
+        }
     }
-    writeRow(values) {
-        return __awaiter(this, void 0, void 0, function* () {
-            if (values.length < 2) {
-                throw new Error("Row must have at least two values");
-            }
-            if (values[0] === null) {
-                throw new Error("First row value cannot be null");
-            }
-            if (values.length > this.header.columnNames.length) {
-                throw new Error("Row has more values than there are columns");
-            }
-            yield this.writer.writeNode(new sml_1.SmlAttribute(values[0], values.slice(1)));
-        });
+    async writeRow(values) {
+        if (values.length < 2) {
+            throw new Error("Row must have at least two values");
+        }
+        if (values[0] === null) {
+            throw new Error("First row value cannot be null");
+        }
+        if (values.length > this.header.columnNames.length) {
+            throw new Error("Row has more values than there are columns");
+        }
+        await this.writer.writeNode(new SmlAttribute(values[0], values.slice(1)));
     }
-    writeRows(rows) {
-        return __awaiter(this, void 0, void 0, function* () {
-            for (const row of rows) {
-                yield this.writeRow(row);
-            }
-        });
+    async writeRows(rows) {
+        for (const row of rows) {
+            await this.writeRow(row);
+        }
     }
-    close() {
-        return __awaiter(this, void 0, void 0, function* () {
-            yield this.writer.close();
-        });
+    async close() {
+        await this.writer.close();
     }
 }
-exports.TblStreamWriter = TblStreamWriter;
 //# sourceMappingURL=tbl-io.js.map

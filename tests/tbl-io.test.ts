@@ -1,8 +1,8 @@
 ﻿import { NoReliableTxtPreambleError, ReliableTxtEncoding } from '@stenway/reliabletxt'
 import { ReliableTxtFile, WriterMode } from '@stenway/reliabletxt-io'
 import { TblDocument } from '@stenway/tbl'
-import * as fs from 'fs'
-import { SyncTblStreamReader, SyncTblStreamWriter, TblFile, TblStreamReader, TblStreamWriter } from '../src'
+import * as fs from 'node:fs'
+import { SyncTblStreamReader, SyncTblStreamWriter, TblFile, TblStreamReader, TblStreamWriter } from '../src/tbl-io.js'
 
 function getFilePath(name: string): string {
 	return "test_files/"+name
