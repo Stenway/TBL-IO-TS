@@ -2,7 +2,9 @@ import { NoReliableTxtPreambleError, ReliableTxtEncoding } from '@stenway/reliab
 import { ReliableTxtFile, WriterMode } from '@stenway/reliabletxt-io';
 import { TblDocument } from '@stenway/tbl';
 import * as fs from 'node:fs';
-import { SyncTblStreamReader, SyncTblStreamWriter, TblFile, TblStreamReader, TblStreamWriter } from '../src/tbl-io.js';
+import { BinaryTblFile, BinaryTblStreamReader, BinaryTblStreamWriter, SyncBinaryTblStreamReader, SyncBinaryTblStreamWriter, SyncTblStreamReader, SyncTblStreamWriter, TblFile, TblStreamReader, TblStreamWriter } from '../src/tbl-io.js';
+import { BinarySmlFile, BinarySmlStreamWriter, SmlStreamWriter, SyncBinarySmlStreamWriter, SyncSmlStreamWriter } from '@stenway/sml-io';
+import { SmlDocument, SmlElement } from '@stenway/sml';
 function getFilePath(name) {
     return "test_files/" + name;
 }
@@ -142,6 +144,13 @@ describe("SyncTblStreamReader", () => {
         expect(() => reader.readRow()).toThrowError();
         reader.close();
     });
+    test("Given %p throws", () => {
+        deleteFileSync(testFilePath);
+        const document = new SmlDocument(new SmlElement("Table"));
+        const writer = SyncSmlStreamWriter.create(document, testFilePath);
+        expect(() => SyncTblStreamReader.getAppendReader(writer)).toThrowError();
+        writer.close();
+    });
 });
 // ----------------------------------------------------------------------
 test("TblStreamReader", async () => {
@@ -186,6 +195,13 @@ describe("TblStreamReader", () => {
         const reader = await TblStreamReader.create(testFilePath);
         await expect(async () => await reader.readRow()).rejects.toThrowError();
         await reader.close();
+    });
+    test("Given %p throws", async () => {
+        await deleteFile(testFilePath);
+        const document = new SmlDocument(new SmlElement("Table"));
+        const writer = await SmlStreamWriter.create(document, testFilePath);
+        await expect(async () => await TblStreamReader.getAppendReader(writer)).rejects.toThrowError();
+        await writer.close();
     });
 });
 // ----------------------------------------------------------------------
@@ -255,5 +271,198 @@ test("TblStreamWriter", async () => {
     expect(await ReliableTxtFile.readAllText(testFilePath)).toEqual(`Table\n\tMeta\n\t\tDescription Text\n\tEnd\n\tColumn1 Column2\n\tValue41 Value42\nEnd`);
     const templateDocument2 = new TblDocument(["Column1", "Column2", "Column3"]);
     await expect(async () => await TblStreamWriter.create(templateDocument2, testFilePath, WriterMode.CreateOrAppend)).rejects.toThrowError();
+});
+// ----------------------------------------------------------------------
+test("SyncBinaryTblStreamReader", () => {
+    const document = TblDocument.parse(`Table\n\tColumn1 Column2\n\tValue11 Value12\n\tValue21 Value22\nEnd`);
+    BinaryTblFile.saveSync(document, testFilePath);
+    const reader = SyncBinaryTblStreamReader.create(testFilePath);
+    expect(reader.header.columnNames).toEqual(["Column1", "Column2"]);
+    expect(reader.isClosed).toEqual(false);
+    expect(reader.handle.existing).toEqual(true);
+    expect(reader.readRow()).toEqual(["Value11", "Value12"]);
+    expect(reader.readRow()).toEqual(["Value21", "Value22"]);
+    expect(reader.readRow()).toEqual(null);
+    expect(reader.readRow()).toEqual(null);
+    reader.close();
+    expect(reader.isClosed).toEqual(true);
+});
+describe("SyncBinaryTblStreamReader", () => {
+    test.each([
+        [`Table\n\tMeta\n\tEnd\n\tColumn1 Column2\nEnd`],
+    ])("Given %p", (input) => {
+        const document = TblDocument.parse(input);
+        BinaryTblFile.saveSync(document, testFilePath);
+        const reader = SyncBinaryTblStreamReader.create(testFilePath);
+        reader.close();
+    });
+    test.each([
+        [`Document\nEnd`],
+        [`Table\nEnd`],
+        [`Table\n\tElement\n\tEnd\nEnd`],
+        [`Table\n\tMeta\n\tEnd\nEnd`],
+        [`Table\n\tMeta\n\tEnd\n\tMeta\n\tEnd\nEnd`],
+        [`Table\n\tMeta\n\tEnd\n\tColumn1 -\nEnd`],
+        [`Table\n\tColumn1 -\nEnd`],
+    ])("Given %p throws", (input) => {
+        const document = SmlDocument.parse(input);
+        BinarySmlFile.saveSync(document, testFilePath);
+        expect(() => SyncBinaryTblStreamReader.create(testFilePath)).toThrowError();
+    });
+    test.each([
+        [`Table\n\tMeta\n\tEnd\n\tColumn1 Column2\n\tElement\n\tEnd\nEnd`],
+        [`Table\n\tMeta\n\tEnd\n\tColumn1 Column2\n\tValue11 Value12 Value13\nEnd`],
+    ])("Given %p throws", (input) => {
+        const document = SmlDocument.parse(input);
+        BinarySmlFile.saveSync(document, testFilePath);
+        const reader = SyncBinaryTblStreamReader.create(testFilePath);
+        expect(() => reader.readRow()).toThrowError();
+        reader.close();
+    });
+    test("Given %p throws", () => {
+        deleteFileSync(testFilePath);
+        const writer = SyncBinarySmlStreamWriter.create("Table", testFilePath);
+        expect(() => SyncBinaryTblStreamReader.getAppendReader(writer)).toThrowError();
+        writer.close();
+    });
+});
+// ----------------------------------------------------------------------
+test("BinaryTblStreamReader", async () => {
+    const document = TblDocument.parse(`Table\n\tColumn1 Column2\n\tValue11 Value12\n\tValue21 Value22\nEnd`);
+    await BinaryTblFile.save(document, testFilePath);
+    const reader = await BinaryTblStreamReader.create(testFilePath);
+    expect(reader.header.columnNames).toEqual(["Column1", "Column2"]);
+    expect(reader.isClosed).toEqual(false);
+    expect(reader.handle.existing).toEqual(true);
+    expect(await reader.readRow()).toEqual(["Value11", "Value12"]);
+    expect(await reader.readRow()).toEqual(["Value21", "Value22"]);
+    expect(await reader.readRow()).toEqual(null);
+    expect(await reader.readRow()).toEqual(null);
+    await reader.close();
+    expect(reader.isClosed).toEqual(true);
+});
+describe("SyncBinaryTblStreamReader", () => {
+    test.each([
+        [`Table\n\tMeta\n\tEnd\n\tColumn1 Column2\nEnd`],
+    ])("Given %p", async (input) => {
+        const document = TblDocument.parse(input);
+        await BinaryTblFile.save(document, testFilePath);
+        const reader = await BinaryTblStreamReader.create(testFilePath);
+        await reader.close();
+    });
+    test.each([
+        [`Document\nEnd`],
+        [`Table\nEnd`],
+        [`Table\n\tElement\n\tEnd\nEnd`],
+        [`Table\n\tMeta\n\tEnd\nEnd`],
+        [`Table\n\tMeta\n\tEnd\n\tMeta\n\tEnd\nEnd`],
+        [`Table\n\tMeta\n\tEnd\n\tColumn1 -\nEnd`],
+        [`Table\n\tColumn1 -\nEnd`],
+    ])("Given %p throws", async (input) => {
+        const document = SmlDocument.parse(input);
+        await BinarySmlFile.save(document, testFilePath);
+        await expect(async () => await BinaryTblStreamReader.create(testFilePath)).rejects.toThrowError();
+    });
+    test.each([
+        [`Table\n\tMeta\n\tEnd\n\tColumn1 Column2\n\tElement\n\tEnd\nEnd`],
+        [`Table\n\tMeta\n\tEnd\n\tColumn1 Column2\n\tValue11 Value12 Value13\nEnd`],
+    ])("Given %p throws", async (input) => {
+        const document = SmlDocument.parse(input);
+        await BinarySmlFile.save(document, testFilePath);
+        const reader = await BinaryTblStreamReader.create(testFilePath);
+        await expect(async () => await reader.readRow()).rejects.toThrowError();
+        await reader.close();
+    });
+    test("Given %p throws", async () => {
+        await deleteFile(testFilePath);
+        const writer = await BinarySmlStreamWriter.create("Table", testFilePath);
+        await expect(async () => await BinaryTblStreamReader.getAppendReader(writer)).rejects.toThrowError();
+        await writer.close();
+    });
+});
+// ----------------------------------------------------------------------
+test("SyncBinaryTblStreamWriter", () => {
+    deleteFileSync(testFilePath);
+    const templateDocument = new TblDocument(["Column1", "Column2"]);
+    templateDocument.meta.description = "Text";
+    let writer = SyncBinaryTblStreamWriter.create(templateDocument, testFilePath);
+    expect(writer.isClosed).toEqual(false);
+    expect(writer.header.columnNames).toEqual(["Column1", "Column2"]);
+    expect(writer.existing).toEqual(false);
+    expect(writer.handle.existing).toEqual(false);
+    writer.writeRow(["Value11", "Value12"]);
+    writer.writeRows([["Value21", null], ["Value31", "Value32"]]);
+    expect(() => writer.writeRow([])).toThrowError();
+    expect(() => writer.writeRow([null, null])).toThrowError();
+    expect(() => writer.writeRow(["Value31", "Value32", "Value33"])).toThrowError();
+    writer.close();
+    expect(writer.isClosed).toEqual(true);
+    expect(BinaryTblFile.loadSync(testFilePath).toString()).toEqual(`Table\n\tMeta\n\t\tDescription Text\n\tEnd\n\tColumn1 Column2\n\tValue11 Value12\n\tValue21 -\n\tValue31 Value32\nEnd`);
+    writer = SyncBinaryTblStreamWriter.create(templateDocument, testFilePath);
+    expect(writer.existing).toEqual(false);
+    writer.close();
+    expect(BinaryTblFile.loadSync(testFilePath).toString()).toEqual(`Table\n\tMeta\n\t\tDescription Text\n\tEnd\n\tColumn1 Column2\nEnd`);
+    writer = SyncBinaryTblStreamWriter.create(templateDocument, testFilePath, WriterMode.CreateOrAppend);
+    expect(writer.existing).toEqual(true);
+    writer.close();
+    expect(BinaryTblFile.loadSync(testFilePath).toString()).toEqual(`Table\n\tMeta\n\t\tDescription Text\n\tEnd\n\tColumn1 Column2\nEnd`);
+    writer = SyncBinaryTblStreamWriter.create(templateDocument, testFilePath, WriterMode.CreateOrAppend);
+    writer.writeRow(["Value41", "Value42"]);
+    writer.close();
+    expect(BinaryTblFile.loadSync(testFilePath).toString()).toEqual(`Table\n\tMeta\n\t\tDescription Text\n\tEnd\n\tColumn1 Column2\n\tValue41 Value42\nEnd`);
+    const templateDocument2 = new TblDocument(["Column1", "Column2", "Column3"]);
+    expect(() => SyncBinaryTblStreamWriter.create(templateDocument2, testFilePath, WriterMode.CreateOrAppend)).toThrowError();
+});
+// ----------------------------------------------------------------------
+test("BinaryTblStreamWriter", async () => {
+    await deleteFile(testFilePath);
+    const templateDocument = new TblDocument(["Column1", "Column2"]);
+    templateDocument.meta.description = "Text";
+    let writer = await BinaryTblStreamWriter.create(templateDocument, testFilePath);
+    expect(writer.isClosed).toEqual(false);
+    expect(writer.header.columnNames).toEqual(["Column1", "Column2"]);
+    expect(writer.existing).toEqual(false);
+    expect(writer.handle.existing).toEqual(false);
+    await writer.writeRow(["Value11", "Value12"]);
+    await writer.writeRows([["Value21", null], ["Value31", "Value32"]]);
+    await expect(async () => await writer.writeRow([])).rejects.toThrowError();
+    await expect(async () => await writer.writeRow([null, null])).rejects.toThrowError();
+    await expect(async () => await writer.writeRow(["Value31", "Value32", "Value33"])).rejects.toThrowError();
+    await writer.close();
+    expect(writer.isClosed).toEqual(true);
+    expect((await BinaryTblFile.load(testFilePath)).toString()).toEqual(`Table\n\tMeta\n\t\tDescription Text\n\tEnd\n\tColumn1 Column2\n\tValue11 Value12\n\tValue21 -\n\tValue31 Value32\nEnd`);
+    writer = await BinaryTblStreamWriter.create(templateDocument, testFilePath);
+    expect(writer.existing).toEqual(false);
+    await writer.close();
+    expect((await BinaryTblFile.load(testFilePath)).toString()).toEqual(`Table\n\tMeta\n\t\tDescription Text\n\tEnd\n\tColumn1 Column2\nEnd`);
+    writer = await BinaryTblStreamWriter.create(templateDocument, testFilePath, WriterMode.CreateOrAppend);
+    expect(writer.existing).toEqual(true);
+    await writer.close();
+    expect((await BinaryTblFile.load(testFilePath)).toString()).toEqual(`Table\n\tMeta\n\t\tDescription Text\n\tEnd\n\tColumn1 Column2\nEnd`);
+    writer = await BinaryTblStreamWriter.create(templateDocument, testFilePath, WriterMode.CreateOrAppend);
+    await writer.writeRow(["Value41", "Value42"]);
+    await writer.close();
+    expect((await BinaryTblFile.load(testFilePath)).toString()).toEqual(`Table\n\tMeta\n\t\tDescription Text\n\tEnd\n\tColumn1 Column2\n\tValue41 Value42\nEnd`);
+    const templateDocument2 = new TblDocument(["Column1", "Column2", "Column3"]);
+    await expect(async () => await BinaryTblStreamWriter.create(templateDocument2, testFilePath, WriterMode.CreateOrAppend)).rejects.toThrowError();
+});
+// ----------------------------------------------------------------------
+test("BinaryTblFile.appendRowsSync", () => {
+    deleteFileSync(testFilePath);
+    const template = new TblDocument(["Column1", "Column2"]);
+    BinaryTblFile.appendRowsSync([["Value11", "Value12"]], template, testFilePath);
+    expect(BinaryTblFile.loadSync(testFilePath).toString()).toEqual(`Table\n\tColumn1 Column2\n\tValue11 Value12\nEnd`);
+    BinaryTblFile.appendRowsSync([], template, testFilePath);
+    BinaryTblFile.appendRowsSync([["Value21", "Value22"]], template, testFilePath);
+    expect(BinaryTblFile.loadSync(testFilePath).toString()).toEqual(`Table\n\tColumn1 Column2\n\tValue11 Value12\n\tValue21 Value22\nEnd`);
+});
+test("BinaryTblFile.appendRows", async () => {
+    await deleteFile(testFilePath);
+    const template = new TblDocument(["Column1", "Column2"]);
+    await BinaryTblFile.appendRows([["Value11", "Value12"]], template, testFilePath);
+    expect((await BinaryTblFile.load(testFilePath)).toString()).toEqual(`Table\n\tColumn1 Column2\n\tValue11 Value12\nEnd`);
+    await BinaryTblFile.appendRows([], template, testFilePath);
+    await BinaryTblFile.appendRows([["Value21", "Value22"]], template, testFilePath);
+    expect((await BinaryTblFile.load(testFilePath)).toString()).toEqual(`Table\n\tColumn1 Column2\n\tValue11 Value12\n\tValue21 Value22\nEnd`);
 });
 //# sourceMappingURL=tbl-io.test.js.map
