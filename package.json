@@ -1,6 +1,6 @@
 {
   "name": "@stenway/tbl-io",
-  "version": "0.7.0",
+  "version": "0.8.0",
   "type": "module",
   "description": "Read and write TBL files",
   "homepage": "https://www.simpleml.com",
@@ -34,7 +34,10 @@
     "tbl",
     "tbls",
     "binarytbls",
-    "btbs"
+    "btbls",
+    "binarysml",
+    "bsml",
+    "bs1"
   ],
   "author": "Stefan John",
   "license": "MIT",
@@ -50,10 +53,10 @@
     "typescript": "^5.0.4"
   },
   "dependencies": {
-    "@stenway/reliabletxt": "^0.7.0",
-    "@stenway/reliabletxt-io": "^0.7.0",
-    "@stenway/sml": "^0.7.0",
-    "@stenway/sml-io": "^0.7.1",
-    "@stenway/tbl": "^0.7.0"
+    "@stenway/reliabletxt": "^0.8.0",
+    "@stenway/reliabletxt-io": "^0.8.0",
+    "@stenway/sml": "^0.8.0",
+    "@stenway/sml-io": "^0.8.0",
+    "@stenway/tbl": "^0.8.0"
   }
 }
