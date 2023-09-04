@@ -1,6 +1,6 @@
 {
   "name": "@stenway/tbl-io",
-  "version": "0.8.0",
+  "version": "1.1.0",
   "type": "module",
   "description": "Read and write TBL files",
   "homepage": "https://www.simpleml.com",
@@ -53,10 +53,10 @@
     "typescript": "^5.0.4"
   },
   "dependencies": {
-    "@stenway/reliabletxt": "^0.8.0",
-    "@stenway/reliabletxt-io": "^0.8.0",
-    "@stenway/sml": "^0.8.0",
-    "@stenway/sml-io": "^0.8.0",
-    "@stenway/tbl": "^0.8.0"
+    "@stenway/reliabletxt": "^1.1.0",
+    "@stenway/reliabletxt-io": "^1.1.0",
+    "@stenway/sml": "^1.1.0",
+    "@stenway/sml-io": "^1.1.0",
+    "@stenway/tbl": "^1.1.1"
   }
 }

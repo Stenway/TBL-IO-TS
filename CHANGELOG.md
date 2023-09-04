@@ -1,5 +1,8 @@
 ﻿# Changelog
 
+## 1.1.0
+- Readme update
+
 ## 0.8.0
 - BinarySML switch
 
